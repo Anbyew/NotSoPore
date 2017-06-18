@@ -10,6 +10,7 @@
 #include <fstream>
 #include <getopt.h>
 #include <string>
+#include <algorithm>
 using namespace std;
 
 void printHelp();
@@ -19,48 +20,61 @@ int main(int argc, char * argv[]) {
     int qscoret = 0;
     qscoret = getScore(argc, argv);
     
-    string filenm = argv[0];
-    string outfnm = argv[1];
+    string filenm = argv[3];
+    string outfnm = argv[4];
     ifstream infile;
-    infile.open(filenm);
+    infile.open(filenm.c_str());
     if (!infile.is_open()) {
         cout << "error opening infile" << endl;
         exit(1);
     }
     ofstream offile;
-    offile.open(outfnm);
+    //offile.open(outfnm);
+    offile.open(outfnm.c_str(), std::ios_base::app);
     if (!offile.is_open()) {
         cout << "error opening outfile" << endl;
         exit(1);
     }
-    
+
     
     string gene;
     string quality;
     int totqs = 0;
-    
     string trash;
+    string prev;
+    
+    getline(infile, trash);
+
+    
     while (getline(infile, trash)) {
-        if(trash[5] == 'n' && trash[6] == 'u'&& trash[7] == 'm' &&
-           trash[8] == '_' && trash[9] == 's' && trash[10] == 't') {
-           
-            gene = "";
+        
+        
+        if ((trash[0] == '+') &&
+            (prev[0] == 'A' || prev[0] == 'G' || prev[0] == 'C' || prev[0] == 'T' || prev[0] == 'U') &&
+            (prev[1] == 'A' || prev[1] == 'G' || prev[1] == 'C' || prev[1] == 'T' || prev[1] == 'U')) {
+            gene = prev;
             quality = "";
-            getline(infile, gene);
-            getline(infile, trash);
             getline(infile, quality);
             
             totqs = 0;
             for (int i = 0; i < quality.length(); ++i) {
                 totqs += int(quality[i]);
             }
-            filenm += "_qscore_";
-            filenm += to_string(totqs / quality.length());
-            offile << filenm << gene;
+            
+            if ((double(totqs) / double(quality.length()) - 36.0) >= qscoret) {
+                string strnm = "";
+                strnm = filenm + "_qscore_";
+                strnm += to_string(double(totqs) / double(quality.length()) - 36.0);
+                offile << '>' << strnm << endl << gene << endl;
+
+            }
             
         }
+        
+        swap(trash, prev);
+        
     }
-    
+
     
     infile.close();
     offile.close();
@@ -104,3 +118,4 @@ void printHelp() {
 
     cout << "infile name, outfile name, -qscore/help" << endl;
 }
+
